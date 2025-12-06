@@ -1,34 +1,51 @@
 import express from "express";
 import cors from "cors";
+import sql from "mssql";
 import path from "path";
 import { fileURLToPath } from "url";
+import componentsRouter from "./routes/components.js";
 
 const app = express();
-const PORT = 3000;
-
-// Для __dirname в ES-модулях
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Пример API
-app.get("/api/test", (req, res) => {
-    res.json({ message: "API OK" });
-});
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Отдача статических файлов (если есть фронтенд)
+// Статика для фронтенда
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// Fallback БЕЗ "*" — просто конкретный путь "/"
-// Никаких паттернов! Express 5 принимает это.
+// API маршруты
+app.use("/api/components", componentsRouter);
+
+// Отдаём HTML
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
-// Запуск сервера
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+const config = {
+    user: "sa",
+    password: "СложныйПароль123!",
+    server: "localhost",
+    database: "PcBuilder",
+    options: {
+        encrypt: false,
+        trustServerCertificate: true
+    },
+    port: 1433
+};
+
+async function startServer() {
+    try {
+        await sql.connect(config);
+        console.log("DB connected!");
+    } catch (err) {
+        console.error("DB Connection Error:", err);
+        return;
+    }
+
+    const PORT = 3000;
+    app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+}
+
+startServer();
