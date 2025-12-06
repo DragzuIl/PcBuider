@@ -1,0 +1,26 @@
+{
+  "name": "pcbuider",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DragzuIl/PcBuider.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DragzuIl/PcBuider/issues"
+  },
+  "homepage": "https://github.com/DragzuIl/PcBuider#readme",
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "mssql": "^12.2.0"
+  }
+}

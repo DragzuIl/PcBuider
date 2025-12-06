@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Компьютерный Конструктор</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>Компьютерный Конструктор</header>
+
+    <div class="container">
+        <h2>Выберите комплектующие</h2>
+        <div class="grid" id="components"></div>
+
+        <div id="build" class="card">
+            <h2>Текущая сборка</h2>
+            <ul id="buildList"></ul>
+            <p>Итоговая цена: <span id="totalPrice">0</span>$</p>
+            <p id="status">Совместимость не проверена</p>
+        </div>
+    </div>
+
+    <!-- Подключаем JS -->
+    <script src="script.js"></script>
+</body>
+</html>
