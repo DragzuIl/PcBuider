@@ -3,13 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self' data: 'unsafe-inline' 'unsafe-eval';
-    font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;
-    img-src 'self' data: https://ngrok.com;
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    script-src 'self' 'unsafe-inline' 'unsafe-eval';
-">
 
 
     <title>Компьютерный Конструктор</title>
@@ -20,8 +13,24 @@
 
     <input id="searchInput" type="text" placeholder="Поиск компонентов..." />
 
+    <div id="pcRecommender">
+    <label>Назначение ПК:</label>
+    <select id="purposeSelect">
+        <option value="">Не выбрано</option>
+        <option value="gaming">Игры</option>
+        <option value="office">Офис</option>
+        <option value="production">Монтаж / рендер</option>
+        <option value="universal">Универсальный</option>
+    </select>
+
+    <label>Максимальная цена:</label>
+<input type="number" id="maxPriceInput" placeholder="Например 30000">
+<button id="applyPriceBtn">Применить</button>
+
+
+
     <div class="container" id="componentsContainer">
-        <!-- Категории будут добавляться сюда -->
+
     </div>
 
     <div id="build" class="card">
@@ -29,12 +38,11 @@
     <ul id="buildList"></ul>
     <p>Итоговая цена: <span id="totalPrice">0</span> ₽</p>
     <p id="status">Совместимость не проверена</p>
-    <button id="clearBuild">Очистить сборку</button> <!-- Новая кнопка -->
+    <button id="clearBuild">Очистить сборку</button>
 </div>
 
 
 
-<!-- Модальное окно -->
 <div id="modal" class="modal">
     <div class="modal-content">
         <span id="closeModal" class="close">&times;</span>
@@ -45,8 +53,23 @@
     </div>
 </div>
 
+<div id="editFormModal" class="modal">
+  <div class="modal-content">
+    <span id="closeEditFormModal" class="close">&times;</span>
+    <h2 id="editFormTitle"></h2>
+    <form id="editForm">
+      <input type="hidden" name="id">
+      <input type="hidden" name="category">
+      <div id="editFormFields"></div>
+      <button type="submit">Сохранить</button>
+    </form>
+  </div>
+</div>
 
-    <!-- Блок уведомлений -->
+
+
+
+
 <div id="notification" class="notification"></div>
 
     <script src="script.js"></script>

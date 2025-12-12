@@ -7,34 +7,57 @@ const categoryNames = {
     psu: "Блоки питания",
     case: "Корпуса"
 };
+
 const container = document.getElementById("componentsContainer");
 
-// Сборка пользователя: ключ — категория, значение — выбранный компонент
 const build = {};
 
-// Элементы интерфейса
 const buildListElement = document.getElementById("buildList");
 const totalPriceElement = document.getElementById("totalPrice");
 const statusElement = document.getElementById("status");
 const clearButton = document.getElementById("clearBuild");
+const searchInput = document.getElementById("searchInput");
 
-// Создаем контейнеры для всех категорий заранее
-document.addEventListener("DOMContentLoaded", () => {
-    // Загружаем сборку из localStorage
-    const savedBuild = localStorage.getItem("pcBuild");
-    if (savedBuild) {
-        Object.assign(build, JSON.parse(savedBuild));
+let searchQuery = "";
+let selectedPurpose = "";
+let maxPriceLimit = 0;
+
+document.getElementById("applyPriceBtn").addEventListener("click", () => {
+    maxPriceLimit = Number(maxPriceInput.value);
+    if (!maxPriceLimit || maxPriceLimit <= 0) {
+        maxPriceLimit = 0;
     }
+    reloadAllCategories();
+});
 
-    // Создаем контейнеры категорий только один раз и загружаем компоненты
+document.addEventListener("DOMContentLoaded", () => {
+    const savedBuild = localStorage.getItem("pcBuild");
+    if (savedBuild) Object.assign(build, JSON.parse(savedBuild));
+
     Object.keys(categoryNames).forEach(cat => {
         const categoryBlock = document.createElement("div");
         categoryBlock.classList.add("category-block");
         categoryBlock.setAttribute("data-cat", cat);
 
+        const titleWrapper = document.createElement("div");
+        titleWrapper.style.display = "flex";
+        titleWrapper.style.justifyContent = "space-between";
+        titleWrapper.style.alignItems = "center";
+
         const title = document.createElement("h2");
         title.textContent = categoryNames[cat];
-        categoryBlock.appendChild(title);
+        titleWrapper.appendChild(title);
+
+        const addBtn = document.createElement("button");
+        addBtn.textContent = `Добавить ${categoryNames[cat].toLowerCase()}`;
+        addBtn.classList.add("add-component-btn");
+        addBtn.addEventListener("click", () => {
+            openEditModal(cat);
+        });
+        titleWrapper.appendChild(addBtn);
+
+
+        categoryBlock.appendChild(titleWrapper);
 
         const grid = document.createElement("div");
         grid.classList.add("grid");
@@ -42,118 +65,274 @@ document.addEventListener("DOMContentLoaded", () => {
 
         container.appendChild(categoryBlock);
 
-        // Загружаем компоненты категории
         loadCategory(cat);
     });
 
-    // Отрисовываем текущую сборку
     renderBuild();
 });
 
+// CPU form
+
+const editFormModal = document.getElementById("editFormModal");
+const closeEditFormModal = document.getElementById("closeEditFormModal");
+const editForm = document.getElementById("editForm");
+const editFormTitle = document.getElementById("editFormTitle");
+const editFormFields = document.getElementById("editFormFields");
+let editFormMode = "create";
+
+function openEditModal(category, component = null) {
+  editFormMode = component ? "edit" : "create";
+
+  editForm.reset();
+  editFormFields.innerHTML = "";
+
+  editForm.elements.category.value = category;
+  editForm.elements.id.value = component ? component.id : "";
+
+  const config = categoryFieldConfigs[category];
+  if (!config) return;
+
+  config.forEach(field => {
+    const wrapper = document.createElement("div");
+
+    const label = document.createElement("label");
+    label.textContent = field.label;
+    wrapper.appendChild(label);
+
+    const input = document.createElement("input");
+    input.name = field.name;
+    input.type = field.type;
+    if (field.step) input.step = field.step;
+    input.required = true;
+
+    if (component && component[field.name] != null) {
+      input.value = component[field.name];
+    }
+
+    wrapper.appendChild(input);
+    editFormFields.appendChild(wrapper);
+  });
+
+  editFormTitle.textContent =
+    editFormMode === "edit"
+      ? `Изменение: ${categoryNames[category]}`
+      : `Новый компонент: ${categoryNames[category]}`;
+
+  editFormModal.classList.add("show");
+}
+
+closeEditFormModal.addEventListener("click", () =>
+  editFormModal.classList.remove("show")
+);
+
+window.addEventListener("click", e => {
+  if (e.target === editFormModal) editFormModal.classList.remove("show");
+});
+
+editForm.addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const formData = new FormData(editForm);
+  const id = formData.get("id");
+  const category = formData.get("category");
+
+  const payload = {};
+  for (const [key, value] of formData.entries()) {
+    if (key === "id" || key === "category") continue;
+
+    const cfg = categoryFieldConfigs[category].find(f => f.name === key);
+    if (cfg && cfg.type === "number") {
+      payload[key] = value === "" ? null : Number(value);
+    } else {
+      payload[key] = value;
+    }
+  }
+
+  const isEdit = editFormMode === "edit";
+
+  const url = isEdit
+    ? `${window.location.origin}/api/components/${category}/${id}`
+    : `${window.location.origin}/api/components/${category}`;
+
+  const method = isEdit ? "PUT" : "POST";
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error("Ошибка ответа сервера");
+
+    showNotification(
+      isEdit ? "Компонент обновлён ✅" : "Компонент добавлен ✅"
+    );
+    editFormModal.classList.remove("show");
+    reloadAllCategories();
+  } catch (err) {
+    console.error(err);
+    showNotification(
+      isEdit ? "Ошибка при обновлении компонента" : "Ошибка при добавлении компонента"
+    );
+  }
+});
 
 
+// Load components
 
 async function loadCategory(category) {
     try {
         const res = await fetch(`${window.location.origin}/api/components/${category}`);
         let components = await res.json();
 
-        // Фильтрация по совместимости
-        components = components.filter(component =>
-            isComponentCompatible(category, component, build)
-        );
+        const prices = components.map(c => c.price);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const lowBorder = minPrice + (maxPrice - minPrice) * 0.33;
+        const midBorder = minPrice + (maxPrice - minPrice) * 0.66;
 
-        // 🔍 Фильтрация по поиску
-        if (searchQuery.trim() !== "") {
+        components = components.filter(c => isComponentCompatible(category, c, build));
+
+        if (searchQuery) {
             components = components.filter(c =>
                 c.name.toLowerCase().includes(searchQuery)
             );
         }
 
-        // Получаем уже существующий блок
+        components = components.filter(c =>
+            filterByPurposeAndBudget(c, category, minPrice, lowBorder, midBorder)
+        );
+
         const categoryBlock = document.querySelector(`[data-cat="${category}"]`);
         const grid = categoryBlock.querySelector(".grid");
-
-        // Очищаем старое содержимое
         grid.innerHTML = "";
 
-        // Обновляем заголовок категории с индикатором
         const title = categoryBlock.querySelector("h2");
-        if (build[category]) {
-            title.textContent = `${categoryNames[category]} - ${build[category].name}`; // добавляем галочку
-        } else {
-            title.textContent = categoryNames[category];
-        }
+        title.textContent = build[category]
+            ? `${categoryNames[category]} - ${build[category].name}`
+            : categoryNames[category];
 
         components.forEach(component => {
             const card = document.createElement("div");
             card.classList.add("card");
-            card.innerHTML = `
-                <h3>${component.name}</h3>
-                <p>Цена: ${component.price} ₽</p>
-                <button>Подробнее</button>
-            `;
 
-            card.querySelector("button").addEventListener("click", () => {
+            let buttonsHtml = `
+            <button class="details-btn">Подробнее</button>
+            <button class="edit-btn">Редактировать</button>
+        `;
+
+
+            card.innerHTML = `
+        <h3>${component.name}</h3>
+        <p>Цена: ${component.price} ₽</p>
+        ${buttonsHtml}
+      `;
+
+            card.querySelector(".details-btn").addEventListener("click", () => {
+                console.log("component in modal:", component);
                 showModal(component, category);
             });
 
+            card.querySelector(".edit-btn").addEventListener("click", () => {
+                openEditModal(category, component);
+            });
+
+
             grid.appendChild(card);
         });
-
     } catch (err) {
         console.error(`Ошибка загрузки категории ${category}:`, err);
     }
 }
 
+const categoryFieldConfigs = {
+    cpu: [
+        { name: "name", label: "Название", type: "text" },
+        { name: "cores", label: "Ядра", type: "number" },
+        { name: "threads", label: "Потоки", type: "number" },
+        { name: "frequency", label: "Частота (ГГц)", type: "number", step: "0.1" },
+        { name: "socket", label: "Сокет", type: "text" },
+        { name: "price", label: "Цена", type: "number" }
+    ],
+    motherboard: [
+        { name: "name", label: "Название", type: "text" },
+        { name: "socket", label: "Сокет", type: "text" },
+        { name: "form_factor", label: "Форм-фактор", type: "text" },
+        { name: "max_ram", label: "Максимальная память (ГБ)", type: "number" },
+        { name: "ram_type", label: "Тип памяти", type: "text" },
+        { name: "price", label: "Цена", type: "number" }
+    ],
+    gpu: [
+        { name: "name", label: "Название", type: "text" },
+        { name: "vram", label: "VRAM (ГБ)", type: "number" },
+        { name: "price", label: "Цена", type: "number" }
+    ],
+    ram: [
+        { name: "name", label: "Название", type: "text" },
+        { name: "size", label: "Объём (ГБ)", type: "number" },
+        { name: "frequency", label: "Частота (МГц)", type: "number" },
+        { name: "ram_type", label: "Тип памяти", type: "text" },
+        { name: "price", label: "Цена", type: "number" }
+    ],
+    storage: [
+        { name: "name", label: "Название", type: "text" },
+        { name: "type", label: "Тип (SSD/HDD)", type: "text" },
+        { name: "size_gb", label: "Объём (ГБ)", type: "number" },
+        { name: "price", label: "Цена", type: "number" }
+    ],
+    psu: [
+        { name: "name", label: "Название", type: "text" },
+        { name: "wattage", label: "Мощность (Вт)", type: "number" },
+        { name: "certificate", label: "Сертификат", type: "text" },
+        { name: "price", label: "Цена", type: "number" }
+    ],
+    case: [
+        { name: "name", label: "Название", type: "text" },
+        { name: "form_factor_support", label: "Поддерживаемые форм-факторы", type: "text" },
+        { name: "towerType", label: "Тип корпуса", type: "text" },
+        { name: "price", label: "Цена", type: "number" }
+    ]
+};
 
-
+// Build
 
 function addToBuild(category, component) {
-    // Добавляем или заменяем компонент в категории
     build[category] = component;
 
     renderBuild();
     saveBuild();
 
-    // Перезагружаем категории с фильтром
-    Object.keys(categoryNames).forEach(cat => loadCategory(cat));
+    reloadAllCategories();
 }
 
 function checkCompatibility(build) {
     let issues = [];
 
-    // Проверка сокета CPU и материнской платы
     if (build.cpu && build.motherboard) {
         if (build.cpu.socket !== build.motherboard.socket) {
-            issues.push(`Сокет CPU (${build.cpu.socket}) не совместим с материнской платой (${build.motherboard.socket})`);
+            issues.push(
+                `Сокет CPU (${build.cpu.socket}) не совместим с материнской платой (${build.motherboard.socket})`
+            );
         }
     }
 
-    // Проверка форм-фактора материнской платы и корпуса
     if (build.motherboard && build.case) {
         if (!build.case.form_factor_support.includes(build.motherboard.form_factor)) {
-            issues.push(`Форм-фактор материнской платы (${build.motherboard.form_factor}) не подходит для корпуса (${build.case.form_factor})`);
+            issues.push(
+                `Форм-фактор материнской платы (${build.motherboard.form_factor}) не подходит для корпуса`
+            );
         }
     }
 
-    // Проверка RAM (максимальная поддерживаемая память материнской платы)
-    if (build.ram && build.motherboard) {
-        if (build.ram.size_gb > build.motherboard.max_ram) {
-            issues.push(`RAM (${build.ram.size_gb}GB) превышает максимальную поддерживаемую память материнской платы (${build.motherboard.max_ram}GB)`);
-        }
-    }
-
-    // Проверка RAM (тип RAM и поддерживаемый тип материнской платы)
     if (build.ram && build.motherboard) {
         if (build.ram.ram_type !== build.motherboard.ram_type) {
-            issues.push(`Тип RAM (${build.ram.ram_type}) не совместим с материнской платой (${build.motherboard.ram_type})`);
+            issues.push(`Тип RAM (${build.ram.ram_type}) не совместим`);
+        }
+        if (build.ram.size_gb > build.motherboard.max_ram) {
+            issues.push(`RAM (${build.ram.size_gb}GB) превышает максимум`);
         }
     }
-    // Можно добавить другие проверки:
-    // GPU и корпус (длина GPU и место в корпусе)
-    // PSU и суммарная потребляемая мощность комплектующих
-    // Количество слотов RAM и материнской платы и т.д.
 
     return issues;
 }
@@ -164,7 +343,7 @@ function renderBuild() {
     Object.keys(build).forEach(cat => {
         const item = build[cat];
         const li = document.createElement("li");
-        li.textContent = `${categoryNames[cat] || cat}: ${item.name} - ${item.price} ₽`;
+        li.textContent = `${categoryNames[cat]}: ${item.name} - ${item.price} ₽`;
 
         const removeBtn = document.createElement("button");
         removeBtn.textContent = "X";
@@ -173,20 +352,18 @@ function renderBuild() {
             delete build[cat];
             renderBuild();
             saveBuild();
-
-            // Перезагружаем категории с фильтром
-            Object.keys(categoryNames).forEach(cat => loadCategory(cat));
+            reloadAllCategories();
         });
 
         li.appendChild(removeBtn);
         buildListElement.appendChild(li);
     });
 
-    const totalPrice = Object.values(build).reduce((sum, item) => sum + item.price, 0);
+    const totalPrice = Object.values(build).reduce((s, i) => s + i.price, 0);
     totalPriceElement.textContent = totalPrice;
 
-    // Проверка совместимости
     const issues = checkCompatibility(build);
+
     if (issues.length === 0) {
         statusElement.textContent = "Все компоненты совместимы ✅";
         statusElement.style.color = "green";
@@ -196,19 +373,15 @@ function renderBuild() {
     }
 }
 
-
-// Очистка всей сборки
 clearButton.addEventListener("click", () => {
     for (let key in build) delete build[key];
     renderBuild();
     saveBuild();
-    Object.keys(categoryNames).forEach(cat => loadCategory(cat));
+    reloadAllCategories();
 });
 
+// Details modal
 
-
-
-// Модальное окно
 const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
 const modalDetails = document.getElementById("modalDetails");
@@ -216,117 +389,122 @@ const modalPrice = document.getElementById("modalPrice");
 const modalAddButton = document.getElementById("modalAddButton");
 const closeModal = document.getElementById("closeModal");
 
-// Настраиваемые подписи для полей
 const fieldLabels = {
     name: "Название",
     price: "Цена",
-    socket: "Сокет процессора",
+    socket: "Сокет",
+    socket_id: "Сокет процессора",
     form_factor: "Форм-фактор",
     max_ram: "Максимальная память (ГБ)",
     ram_type: "Тип памяти",
     length_mm: "Длина GPU",
     power_w: "Мощность блока питания",
-    size: "Объём памяти (ГБ)",
-    threads: "Количество потоков",
-    cores: "Количество ядер",
     size_gb: "Объём накопителя (ГБ)",
+    vram: "Видеопамять (ГБ)",
+    certificate: "Сертификат",
+    cores: "Количество ядер",
+    threads: "Количество потоков",
+    frequency: "Частота (ГГц)",
+    size: "Объём памяти (ГБ)",
     type: "Тип накопителя",
-    frequency: "Частота (МГц)",
-    vram: "Объём видеопамяти (ГБ)",
+    form_factor_support: "Поддерживаемые форм-факторы",
     wattage: "Мощность (Вт)",
-    certificate: "Сертификат эффективности",
-    "form_factor_support": "Поддерживаемые форм-факторы",
-    "tower-type": "Тип корпуса",
-    // и т.д.
-    // можно добавить другие поля
+    "tower-type": "Тип корпуса"
 };
 
 const notification = document.getElementById("notification");
 
-function showNotification(message, duration = 3000) {
-    notification.textContent = message;
+function showNotification(msg, duration = 3000) {
+    notification.textContent = msg;
     notification.classList.add("show");
-
-    // Скрываем через duration
-    setTimeout(() => {
-        notification.classList.remove("show");
-    }, duration);
+    setTimeout(() => notification.classList.remove("show"), duration);
 }
 
 function showModal(component, category) {
     modalTitle.textContent = component.name;
 
-    let details = "";
+    let html = "";
     for (let key in component) {
-        if (key !== "id" && key !== "name" && key !== "price") {
-            const label = fieldLabels[key] || key;
-            details += `<strong>${label}:</strong> ${component[key]}<br>`;
-        }
+        if (["id", "name", "price", "socket_id"].includes(key)) continue;
+        const label = fieldLabels[key] || key;
+        html += `<strong>${label}:</strong> ${component[key]}<br>`;
     }
-    modalDetails.innerHTML = details;
+    modalDetails.innerHTML = html;
     modalPrice.textContent = component.price;
 
-    // Показываем модалку
     modal.classList.add("show");
 
-    // Убираем старый обработчик кнопки
     modalAddButton.replaceWith(modalAddButton.cloneNode(true));
-    const newButton = document.getElementById("modalAddButton");
+    const btn = document.getElementById("modalAddButton");
 
-    // Добавляем новый обработчик один раз
-    newButton.addEventListener("click", () => {
-        let message = "";
+    btn.addEventListener(
+        "click",
+        () => {
+            const msg = build[category]
+                ? `${build[category].name} заменён на ${component.name} ✅`
+                : `${component.name} добавлен в сборку ✅`;
 
-        // Проверяем, есть ли уже компонент в этой категории
-        if (build[category]) {
-            message = `${build[category].name} заменён на ${component.name} ✅`;
-        } else {
-            message = `${component.name} добавлен в сборку ✅`;
-        }
-
-        addToBuild(category, component);
-
-        // Показываем уведомление
-        showNotification(message);
-
-        // Закрываем модалку
-        modal.classList.remove("show");
-    }, { once: true });
+            addToBuild(category, component);
+            showNotification(msg);
+            modal.classList.remove("show");
+        },
+        { once: true }
+    );
 }
 
-// Закрытие модалки по крестику
-closeModal.addEventListener("click", () => {
-    modal.classList.remove("show");
+closeModal.addEventListener("click", () => modal.classList.remove("show"));
+window.addEventListener("click", e => e.target === modal && modal.classList.remove("show"));
+window.addEventListener("keydown", e => e.key === "Escape" && modal.classList.remove("show"));
+
+// Filters
+
+document.getElementById("purposeSelect").addEventListener("change", e => {
+    selectedPurpose = e.target.value;
+    reloadAllCategories();
 });
 
-// Закрытие модалки при клике по свободной области
-window.addEventListener("click", (e) => {
-    if (e.target === modal) {
-        modal.classList.remove("show");
-    }
-});
+function reloadAllCategories() {
+    Object.keys(categoryNames).forEach(cat => loadCategory(cat));
+}
 
-// Закрытие модалки при нажатии Escape
-window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-        modal.classList.remove("show");
+function filterByPurposeAndBudget(component, category, minPrice, lowBorder, midBorder) {
+    if (maxPriceLimit > 0 && component.price > maxPriceLimit) return false;
+
+    if (selectedPurpose === "gaming") {
+        if (category === "gpu" && component.vram < 6) return false;
+        if (category === "cpu" && component.cores < 4) return false;
     }
-});
+
+    if (selectedPurpose === "office") {
+        if (category === "cpu" && component.cores < 2) return false;
+    }
+
+    if (selectedPurpose === "production") {
+        if (category === "cpu" && component.cores < 8) return false;
+        if (category === "ram" && component.size_gb < 16) return false;
+        if (category === "gpu" && component.vram < 8) return false;
+    }
+
+    if (selectedPurpose === "universal") {
+        if (category === "cpu" && component.cores < 4) return false;
+        if (category === "gpu" && component.vram < 4) return false;
+    }
+
+    return true;
+}
+
+// Compatibility
 
 function isComponentCompatible(category, component, build) {
-
-    // Если сборка пуста → показываем все компоненты
     if (Object.keys(build).length === 0) return true;
 
-    // Проверяем совместимость CPU ↔ motherboard
     if (category === "motherboard" && build.cpu) {
-        if (component.socket !== build.cpu.socket) return false;
+        if (component.socket_id !== build.cpu.socket_id) return false;
     }
     if (category === "cpu" && build.motherboard) {
-        if (component.socket !== build.motherboard.socket) return false;
+        if (component.socket_id !== build.motherboard.socket_id) return false;
     }
 
-    // Case ↔ motherboard
     if (category === "case" && build.motherboard) {
         if (!component.form_factor_support.includes(build.motherboard.form_factor))
             return false;
@@ -336,42 +514,23 @@ function isComponentCompatible(category, component, build) {
             return false;
     }
 
-    // RAM type
     if (category === "ram" && build.motherboard) {
         if (component.ram_type !== build.motherboard.ram_type) return false;
-    }
-    if (category === "motherboard" && build.ram) {
-        if (build.ram.ram_type !== component.ram_type) return false;
-    }
-
-    // RAM size
-    if (category === "ram" && build.motherboard) {
         if (component.size_gb > build.motherboard.max_ram) return false;
     }
 
     return true;
 }
 
-const searchInput = document.getElementById("searchInput");
-
-let searchQuery = "";
+// Search
 
 searchInput.addEventListener("input", () => {
     searchQuery = searchInput.value.toLowerCase();
-    Object.keys(categoryNames).forEach(cat => loadCategory(cat));
+    reloadAllCategories();
 });
+
+// Save
 
 function saveBuild() {
     localStorage.setItem("pcBuild", JSON.stringify(build));
 }
-
-
-document.addEventListener("DOMContentLoaded", () => {
-    Object.keys(categoryNames).forEach(cat => loadCategory(cat));
-});
-
-
-
-
-
-
