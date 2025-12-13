@@ -9,8 +9,32 @@ const categoryNames = {
 };
 
 const container = document.getElementById("componentsContainer");
+const categoryTabs = document.querySelectorAll(".category-tab");
+let activeCategory = "cpu"; // дефолт
+
+categoryTabs.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const cat = btn.dataset.category;
+    setActiveCategory(cat);
+  });
+});
+
+function setActiveCategory(cat) {
+  activeCategory = cat;
+
+  categoryTabs.forEach(b => {
+    b.classList.toggle("active", b.dataset.category === cat);
+  });
+
+  document.querySelectorAll(".category-block").forEach(block => {
+    const blockCat = block.getAttribute("data-cat");
+    block.style.display = blockCat === cat ? "block" : "none";
+  });
+}
+
 
 const build = {};
+const allComponentsByCategory = {};
 
 const buildListElement = document.getElementById("buildList");
 const totalPriceElement = document.getElementById("totalPrice");
@@ -31,45 +55,46 @@ document.getElementById("applyPriceBtn").addEventListener("click", () => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-    const savedBuild = localStorage.getItem("pcBuild");
-    if (savedBuild) Object.assign(build, JSON.parse(savedBuild));
+  const savedBuild = localStorage.getItem("pcBuild");
+  if (savedBuild) Object.assign(build, JSON.parse(savedBuild));
 
-    Object.keys(categoryNames).forEach(cat => {
-        const categoryBlock = document.createElement("div");
-        categoryBlock.classList.add("category-block");
-        categoryBlock.setAttribute("data-cat", cat);
+  Object.keys(categoryNames).forEach(cat => {
+    const categoryBlock = document.createElement("div");
+    categoryBlock.classList.add("category-block");
+    categoryBlock.setAttribute("data-cat", cat);
 
-        const titleWrapper = document.createElement("div");
-        titleWrapper.style.display = "flex";
-        titleWrapper.style.justifyContent = "space-between";
-        titleWrapper.style.alignItems = "center";
+    const titleWrapper = document.createElement("div");
+    titleWrapper.style.display = "flex";
+    titleWrapper.style.justifyContent = "space-between";
+    titleWrapper.style.alignItems = "center";
 
-        const title = document.createElement("h2");
-        title.textContent = categoryNames[cat];
-        titleWrapper.appendChild(title);
+    const title = document.createElement("h2");
+    title.textContent = categoryNames[cat];
+    titleWrapper.appendChild(title);
 
-        const addBtn = document.createElement("button");
-        addBtn.textContent = `Добавить ${categoryNames[cat].toLowerCase()}`;
-        addBtn.classList.add("add-component-btn");
-        addBtn.addEventListener("click", () => {
-            openEditModal(cat);
-        });
-        titleWrapper.appendChild(addBtn);
-
-
-        categoryBlock.appendChild(titleWrapper);
-
-        const grid = document.createElement("div");
-        grid.classList.add("grid");
-        categoryBlock.appendChild(grid);
-
-        container.appendChild(categoryBlock);
-
-        loadCategory(cat);
+    const addBtn = document.createElement("button");
+    addBtn.textContent = `Добавить ${categoryNames[cat].toLowerCase()}`;
+    addBtn.classList.add("add-component-btn");
+    addBtn.addEventListener("click", () => {
+      openEditModal(cat);
     });
+    titleWrapper.appendChild(addBtn);
 
-    renderBuild();
+    categoryBlock.appendChild(titleWrapper);
+
+    const grid = document.createElement("div");
+    grid.classList.add("grid");
+    categoryBlock.appendChild(grid);
+
+    container.appendChild(categoryBlock);
+
+    loadCategory(cat);
+  });
+
+  setActiveCategory("cpu");   // ← показываем только CPU
+  renderBuild();
 });
+
 
 // CPU form
 
@@ -81,101 +106,110 @@ const editFormFields = document.getElementById("editFormFields");
 let editFormMode = "create";
 
 function openEditModal(category, component = null) {
-  editFormMode = component ? "edit" : "create";
+    editFormMode = component ? "edit" : "create";
 
-  editForm.reset();
-  editFormFields.innerHTML = "";
+    editForm.reset();
+    editFormFields.innerHTML = "";
 
-  editForm.elements.category.value = category;
-  editForm.elements.id.value = component ? component.id : "";
+    editForm.elements.category.value = category;
+    editForm.elements.id.value = component ? component.id : "";
 
-  const config = categoryFieldConfigs[category];
-  if (!config) return;
+    const config = categoryFieldConfigs[category];
+    if (!config) return;
 
-  config.forEach(field => {
-    const wrapper = document.createElement("div");
+    config.forEach(field => {
+        const wrapper = document.createElement("div");
 
-    const label = document.createElement("label");
-    label.textContent = field.label;
-    wrapper.appendChild(label);
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        wrapper.appendChild(label);
 
-    const input = document.createElement("input");
-    input.name = field.name;
-    input.type = field.type;
-    if (field.step) input.step = field.step;
-    input.required = true;
+        const input = document.createElement("input");
+        input.name = field.name;
+        input.type = field.type;
+        if (field.step) input.step = field.step;
+        input.required = true;
 
-    if (component && component[field.name] != null) {
-      input.value = component[field.name];
-    }
+        if (component && component[field.name] != null) {
+            input.value = component[field.name];
+        }
 
-    wrapper.appendChild(input);
-    editFormFields.appendChild(wrapper);
-  });
+        wrapper.appendChild(input);
+        editFormFields.appendChild(wrapper);
+    });
 
-  editFormTitle.textContent =
-    editFormMode === "edit"
-      ? `Изменение: ${categoryNames[category]}`
-      : `Новый компонент: ${categoryNames[category]}`;
+    editFormTitle.textContent =
+        editFormMode === "edit"
+            ? `Изменение: ${categoryNames[category]}`
+            : `Новый компонент: ${categoryNames[category]}`;
 
-  editFormModal.classList.add("show");
+    editFormModal.classList.add("show");
 }
 
 closeEditFormModal.addEventListener("click", () =>
-  editFormModal.classList.remove("show")
+    editFormModal.classList.remove("show")
 );
 
 window.addEventListener("click", e => {
-  if (e.target === editFormModal) editFormModal.classList.remove("show");
+    if (e.target === editFormModal) editFormModal.classList.remove("show");
 });
 
+const notification = document.getElementById("notification");
+
+function showNotification(msg, duration = 3000) {
+    notification.textContent = msg;
+    notification.classList.add("show");
+    setTimeout(() => notification.classList.remove("show"), duration);
+}
+
+
 editForm.addEventListener("submit", async e => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const formData = new FormData(editForm);
-  const id = formData.get("id");
-  const category = formData.get("category");
+    const formData = new FormData(editForm);
+    const id = formData.get("id");
+    const category = formData.get("category");
 
-  const payload = {};
-  for (const [key, value] of formData.entries()) {
-    if (key === "id" || key === "category") continue;
+    const payload = {};
+    for (const [key, value] of formData.entries()) {
+        if (key === "id" || key === "category") continue;
 
-    const cfg = categoryFieldConfigs[category].find(f => f.name === key);
-    if (cfg && cfg.type === "number") {
-      payload[key] = value === "" ? null : Number(value);
-    } else {
-      payload[key] = value;
+        const cfg = categoryFieldConfigs[category].find(f => f.name === key);
+        if (cfg && cfg.type === "number") {
+            payload[key] = value === "" ? null : Number(value);
+        } else {
+            payload[key] = value;
+        }
     }
-  }
 
-  const isEdit = editFormMode === "edit";
+    const isEdit = editFormMode === "edit";
 
-  const url = isEdit
-    ? `${window.location.origin}/api/components/${category}/${id}`
-    : `${window.location.origin}/api/components/${category}`;
+    const url = isEdit
+        ? `${window.location.origin}/api/components/${category}/${id}`
+        : `${window.location.origin}/api/components/${category}`;
 
-  const method = isEdit ? "PUT" : "POST";
+    const method = isEdit ? "PUT" : "POST";
 
-  try {
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
 
-    if (!res.ok) throw new Error("Ошибка ответа сервера");
+        if (!res.ok) throw new Error("Ошибка ответа сервера");
 
-    showNotification(
-      isEdit ? "Компонент обновлён ✅" : "Компонент добавлен ✅"
-    );
-    editFormModal.classList.remove("show");
-    reloadAllCategories();
-  } catch (err) {
-    console.error(err);
-    showNotification(
-      isEdit ? "Ошибка при обновлении компонента" : "Ошибка при добавлении компонента"
-    );
-  }
+        showNotification(
+            isEdit ? "Компонент обновлён ✅" : "Компонент добавлен ✅"
+        );
+        editFormModal.classList.remove("show");
+        reloadAllCategories();
+    } catch (err) {
+        console.error(err);
+        showNotification(
+            isEdit ? "Ошибка при обновлении компонента" : "Ошибка при добавлении компонента"
+        );
+    }
 });
 
 
@@ -185,6 +219,7 @@ async function loadCategory(category) {
     try {
         const res = await fetch(`${window.location.origin}/api/components/${category}`);
         let components = await res.json();
+        allComponentsByCategory[category] = components.slice();
 
         const prices = components.map(c => c.price);
         const minPrice = Math.min(...prices);
@@ -217,17 +252,15 @@ async function loadCategory(category) {
             const card = document.createElement("div");
             card.classList.add("card");
 
-            let buttonsHtml = `
-            <button class="details-btn">Подробнее</button>
-            <button class="edit-btn">Редактировать</button>
-        `;
-
-
             card.innerHTML = `
-        <h3>${component.name}</h3>
-        <p>Цена: ${component.price} ₽</p>
-        ${buttonsHtml}
-      `;
+  <h3>${component.name}</h3>
+  <p>Цена: ${component.price} ₽</p>
+  <div class="card-buttons">
+    <button class="details-btn">Подробнее</button>
+    <button class="edit-btn">Редактировать</button>
+  </div>
+`;
+
 
             card.querySelector(".details-btn").addEventListener("click", () => {
                 console.log("component in modal:", component);
@@ -339,6 +372,7 @@ function checkCompatibility(build) {
 
 function renderBuild() {
     buildListElement.innerHTML = "";
+    const allComponentsByCategory = {};
 
     Object.keys(build).forEach(cat => {
         const item = build[cat];
@@ -386,7 +420,6 @@ const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
 const modalDetails = document.getElementById("modalDetails");
 const modalPrice = document.getElementById("modalPrice");
-const modalAddButton = document.getElementById("modalAddButton");
 const closeModal = document.getElementById("closeModal");
 
 const fieldLabels = {
@@ -412,13 +445,7 @@ const fieldLabels = {
     "tower-type": "Тип корпуса"
 };
 
-const notification = document.getElementById("notification");
 
-function showNotification(msg, duration = 3000) {
-    notification.textContent = msg;
-    notification.classList.add("show");
-    setTimeout(() => notification.classList.remove("show"), duration);
-}
 
 function showModal(component, category) {
     modalTitle.textContent = component.name;
@@ -434,23 +461,24 @@ function showModal(component, category) {
 
     modal.classList.add("show");
 
-    modalAddButton.replaceWith(modalAddButton.cloneNode(true));
-    const btn = document.getElementById("modalAddButton");
+    const oldBtn = document.getElementById("modalAddButton");
+    const newBtn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
 
-    btn.addEventListener(
-        "click",
-        () => {
-            const msg = build[category]
-                ? `${build[category].name} заменён на ${component.name} ✅`
-                : `${component.name} добавлен в сборку ✅`;
+    newBtn.addEventListener("click", () => {
+        const msg = build[category]
+            ? `${build[category].name} заменён на ${component.name} ✅`
+            : `${component.name} добавлен в сборку ✅`;
 
-            addToBuild(category, component);
-            showNotification(msg);
-            modal.classList.remove("show");
-        },
-        { once: true }
-    );
+        addToBuild(category, component);
+        showNotification(msg);
+        modal.classList.remove("show");
+    });
 }
+
+
+
+
 
 closeModal.addEventListener("click", () => modal.classList.remove("show"));
 window.addEventListener("click", e => e.target === modal && modal.classList.remove("show"));
@@ -498,17 +526,37 @@ function filterByPurposeAndBudget(component, category, minPrice, lowBorder, midB
 function isComponentCompatible(category, component, build) {
     if (Object.keys(build).length === 0) return true;
 
-    if (category === "motherboard" && build.cpu) {
-        if (component.socket_id !== build.cpu.socket_id) return false;
+    if (category === "cpu") {
+        if (build.motherboard && component.socket_id !== build.motherboard.socket_id) {
+            return false;
+        }
+
+        if (!build.motherboard && build.case) {
+            const motherboards = allComponentsByCategory.motherboard || [];
+            const hasBoardForThisCpu = motherboards.some(mb =>
+                mb.socket_id === component.socket_id &&
+                build.case.form_factor_support.includes(mb.form_factor)
+            );
+            if (!hasBoardForThisCpu) return false;
+        }
     }
-    if (category === "cpu" && build.motherboard) {
-        if (component.socket_id !== build.motherboard.socket_id) return false;
+
+    if (category === "motherboard") {
+        if (build.cpu && component.socket_id !== build.cpu.socket_id) {
+            return false;
+        }
+
+        if (build.case &&
+            !build.case.form_factor_support.includes(component.form_factor)) {
+            return false;
+        }
     }
 
     if (category === "case" && build.motherboard) {
         if (!component.form_factor_support.includes(build.motherboard.form_factor))
             return false;
     }
+
     if (category === "motherboard" && build.case) {
         if (!build.case.form_factor_support.includes(component.form_factor))
             return false;
@@ -521,6 +569,7 @@ function isComponentCompatible(category, component, build) {
 
     return true;
 }
+
 
 // Search
 

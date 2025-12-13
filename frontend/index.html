@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,70 +9,83 @@
     <title>Компьютерный Конструктор</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <header>Компьютерный Конструктор</header>
 
     <input id="searchInput" type="text" placeholder="Поиск компонентов..." />
 
     <div id="pcRecommender">
-    <label>Назначение ПК:</label>
-    <select id="purposeSelect">
-        <option value="">Не выбрано</option>
-        <option value="gaming">Игры</option>
-        <option value="office">Офис</option>
-        <option value="production">Монтаж / рендер</option>
-        <option value="universal">Универсальный</option>
-    </select>
+        <label>Назначение ПК:</label>
+        <select id="purposeSelect">
+            <option value="">Не выбрано</option>
+            <option value="gaming">Игры</option>
+            <option value="office">Офис</option>
+            <option value="production">Монтаж / рендер</option>
+            <option value="universal">Универсальный</option>
+        </select>
 
-    <label>Максимальная цена:</label>
-<input type="number" id="maxPriceInput" placeholder="Например 30000">
-<button id="applyPriceBtn">Применить</button>
+        <label>Максимальная цена:</label>
+        <input type="number" id="maxPriceInput" placeholder="Например 30000">
+        <button id="applyPriceBtn">Применить</button>
 
 
 
-    <div class="container" id="componentsContainer">
+        <div id="categoryTabs">
+            <button class="category-tab active" data-category="cpu">Процессоры</button>
+            <button class="category-tab" data-category="motherboard">Материнские платы</button>
+            <button class="category-tab" data-category="gpu">Видеокарты</button>
+            <button class="category-tab" data-category="ram">Оперативная память</button>
+            <button class="category-tab" data-category="storage">Накопители</button>
+            <button class="category-tab" data-category="psu">Блоки питания</button>
+            <button class="category-tab" data-category="case">Корпуса</button>
+        </div>
+
+        <div id="componentsContainer"></div>
+
 
     </div>
 
     <div id="build" class="card">
-    <h2>Текущая сборка</h2>
-    <ul id="buildList"></ul>
-    <p>Итоговая цена: <span id="totalPrice">0</span> ₽</p>
-    <p id="status">Совместимость не проверена</p>
-    <button id="clearBuild">Очистить сборку</button>
-</div>
-
-
-
-<div id="modal" class="modal">
-    <div class="modal-content">
-        <span id="closeModal" class="close">&times;</span>
-        <h2 id="modalTitle"></h2>
-        <p id="modalDetails"></p>
-        <p>Цена: <span id="modalPrice"></span> ₽</p>
-        <button id="modalAddButton">Добавить в сборку</button>
+        <h2>Текущая сборка</h2>
+        <ul id="buildList"></ul>
+        <p>Итоговая цена: <span id="totalPrice">0</span> ₽</p>
+        <p id="status">Совместимость не проверена</p>
+        <button id="clearBuild">Очистить сборку</button>
     </div>
-</div>
-
-<div id="editFormModal" class="modal">
-  <div class="modal-content">
-    <span id="closeEditFormModal" class="close">&times;</span>
-    <h2 id="editFormTitle"></h2>
-    <form id="editForm">
-      <input type="hidden" name="id">
-      <input type="hidden" name="category">
-      <div id="editFormFields"></div>
-      <button type="submit">Сохранить</button>
-    </form>
-  </div>
-</div>
 
 
 
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span id="closeModal" class="close">&times;</span>
+            <h2 id="modalTitle"></h2>
+            <p id="modalDetails"></p>
+            <p>Цена: <span id="modalPrice"></span> ₽</p>
+            <button id="modalAddButton">Добавить в сборку</button>
+        </div>
+    </div>
+
+    <div id="editFormModal" class="modal">
+        <div class="modal-content">
+            <span id="closeEditFormModal" class="close">&times;</span>
+            <h2 id="editFormTitle"></h2>
+            <form id="editForm">
+                <input type="hidden" name="id">
+                <input type="hidden" name="category">
+                <div id="editFormFields"></div>
+                <button type="submit">Сохранить</button>
+            </form>
+        </div>
+    </div>
 
 
-<div id="notification" class="notification"></div>
+
+
+
+    <div id="notification" class="notification"></div>
 
     <script src="script.js"></script>
 </body>
+
 </html>
