@@ -1,23 +1,61 @@
+:root {
+  --bg-body: #050608;          /* общий фон (почти чёрный) */
+  --bg-card: #0b1113;          /* карточки */
+  --bg-card-strong: #0f1518;   /* блок сборки/панели */
+  --bg-input: #050a0c;         /* поля, модалки */
+  --bg-input-alt: #0c1416;
+
+  --text-main: #e6f9f5;        /* светлый аквамариновый оттенок для текста */
+  --text-muted: #b6d4cd;       /* вторичный текст */
+  --text-dark: #021310;        /* тёмный текст на ярких акцентных кнопках */
+  --text-strong: #ffffff;      /* чисто белый заголовков */
+
+  --accent-main: #26c6a3;      /* основной аквамариновый */
+  --accent-hover: #40e0c0;     /* яркий аквамарин при hover */
+  --accent-soft: #7fffd4;      /* классический aquamarine для подсветок */
+  --accent-soft-2: #a3ffe0;    /* мягкий для иконок/крестиков */
+  --accent-border: #40e0c0;    /* подчёркивания/бордеры */
+  --accent-border-muted: #234542; /* приглушённый бордер */
+
+  --header-grad-start: #020308;
+  --header-grad-end: #007e68;  /* зелёно‑бирюзовый акцент в шапке */
+
+  --danger: #ff5252;
+  --danger-hover: #ff1744;
+
+  --shadow-header: 0 4px 12px rgba(0, 0, 0, 0.8);
+  --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.75);
+  --shadow-card-hover: 0 8px 28px rgba(0, 0, 0, 0.95);
+  --shadow-build: 0 2px 20px rgba(0, 0, 0, 0.9);
+  --shadow-notification: 0 4px 18px rgba(0, 0, 0, 0.6);
+  --shadow-btn-hover-green: 0 3px 10px rgba(64, 224, 192, 0.4);
+  --shadow-btn-hover-aqua: 0 2px 10px rgba(64, 224, 192, 0.4);
+
+  --backdrop-main: rgba(0, 0, 0, 0.8);
+  --backdrop-edit: rgba(0, 0, 0, 0.7);
+}
+
+
 * {
   box-sizing: border-box;
 }
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #050608;
+  background: var(--bg-body);
   margin: 0;
   padding: 0;
-  color: #e5f7f2;
+  color: var(--text-main);
 }
 
 header {
-  background: linear-gradient(90deg, #020308, #008f7a);
-  color: #e5f7f2;
+  background: linear-gradient(90deg, var(--header-grad-start), var(--header-grad-end));
+  color: var(--text-main);
   text-align: center;
   padding: 20px 10px;
   font-size: 1.8rem;
   font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+  box-shadow: var(--shadow-header);
 }
 
 .container {
@@ -40,16 +78,15 @@ header {
 .category-block h2 {
   margin-bottom: 15px;
   font-size: 1.4rem;
-  border-bottom: 2px solid #00e6c0;
+  border-bottom: 2px solid var(--accent-border);
   padding-bottom: 5px;
   gap: 10px;
   flex: 1;
   text-align: center;
 }
 
-
 .category-block h2 span {
-  color: #66f1c2;
+  color: var(--accent-soft);
   font-size: 1rem;
 }
 
@@ -64,20 +101,19 @@ header {
 .category-tab {
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid #224b46;
-  background: #05080c;
-  color: #e5f7f2;
+  border: 1px solid var(--accent-border-muted);
+  background: var(--bg-input);
+  color: var(--text-main);
   cursor: pointer;
   font-size: 0.9rem;
   transition: 0.2s;
 }
 
 .category-tab.active {
-  background: #00bfa5;
-  color: #02110f;
-  border-color: #00e6c0;
+  background: var(--accent-main);
+  color: var(--text-dark);
+  border-color: var(--accent-border);
 }
-
 
 .grid {
   display: grid;
@@ -86,10 +122,10 @@ header {
 }
 
 .card {
-  background: #0c1014;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 15px;
-  box-shadow: 0 2px 14px rgba(0,0,0,0.7);
+  box-shadow: var(--shadow-card);
   text-align: center;
   transition: transform 0.2s, box-shadow 0.2s;
   display: flex;
@@ -98,19 +134,19 @@ header {
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 26px rgba(0,0,0,0.9);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .card h3 {
   margin: 10px 0;
   font-size: 1rem;
-  color: #f5fffb;
+  color: var(--text-strong);
 }
 
 .card p {
   margin: 5px 0;
   font-size: 0.9rem;
-  color: #c7e7dd;
+  color: var(--text-muted);
 }
 
 .card-buttons {
@@ -123,8 +159,8 @@ header {
 .card button {
   padding: 8px 12px;
   border: none;
-  background-color: #00bfa5;
-  color: #02110f;
+  background-color: var(--accent-main);
+  color: var(--text-dark);
   border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
@@ -132,17 +168,17 @@ header {
 }
 
 .card button:hover {
-  background-color: #00e6c0;
+  background-color: var(--accent-hover);
 }
 
 #build {
-  background: #080b10;
+  background: var(--bg-card-strong);
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 2px 18px rgba(0,0,0,0.85);
+  box-shadow: var(--shadow-build);
   margin: 20px auto;
   max-width: 400px;
-  color: #e5f7f2;
+  color: var(--text-main);
 }
 
 #buildList li {
@@ -153,9 +189,9 @@ header {
 }
 
 #buildList li button {
-  background-color: #ff5252;
+  background-color: var(--danger);
   border: none;
-  color: white;
+  color: #ffffff;
   border-radius: 6px;
   padding: 2px 6px;
   cursor: pointer;
@@ -163,7 +199,7 @@ header {
 }
 
 #buildList li button:hover {
-  background-color: #ff1744;
+  background-color: var(--danger-hover);
 }
 
 .modal {
@@ -174,7 +210,7 @@ header {
   justify-content: center;
   align-items: center;
   padding: 10px;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: var(--backdrop-main);
 }
 
 .modal.show {
@@ -184,8 +220,8 @@ header {
 
 .modal-content {
   position: relative;
-  background: #05080c;
-  color: #e5f7f2;
+  background: var(--bg-input);
+  color: var(--text-main);
   padding: 20px 22px;
   border-radius: 14px;
   width: 100%;
@@ -197,7 +233,7 @@ header {
 .modal-content h2 {
   margin: 0 0 14px;
   font-size: 1.4rem;
-  border-bottom: 2px solid #00e6c0;
+  border-bottom: 2px solid var(--accent-border);
   padding-bottom: 6px;
 }
 
@@ -213,7 +249,7 @@ header {
   right: 14px;
   font-size: 1.4rem;
   cursor: pointer;
-  color: #7fd8c7;
+  color: var(--accent-soft-2);
 }
 
 .modal-content .close:hover,
@@ -223,8 +259,8 @@ header {
 
 #modalAddButton {
   margin-top: 15px;
-  background: #00bfa5;
-  color: #02110f;
+  background: var(--accent-main);
+  color: var(--text-dark);
   padding: 10px 20px;
   border: none;
   border-radius: 10px;
@@ -234,7 +270,7 @@ header {
 }
 
 #modalAddButton:hover {
-  background: #00e6c0;
+  background: var(--accent-hover);
 }
 
 #cpuForm {
@@ -246,21 +282,21 @@ header {
 
 #cpuForm label {
   font-size: 0.9rem;
-  color: #e5f7f2;
+  color: var(--text-main);
 }
 
 #cpuForm input {
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #224b46;
-  background: #0f151b;
-  color: #e5f7f2;
+  border: 1px solid var(--accent-border-muted);
+  background: var(--bg-input-alt);
+  color: var(--text-main);
   font-size: 0.95rem;
 }
 
 #cpuForm input:focus {
   outline: none;
-  border-color: #00e6c0;
+  border-color: var(--accent-hover);
   box-shadow: 0 0 6px rgba(0, 230, 192, 0.5);
 }
 
@@ -269,8 +305,8 @@ header {
   padding: 9px 12px;
   border-radius: 10px;
   border: none;
-  background: #00bfa5;
-  color: #02110f;
+  background: var(--accent-main);
+  color: var(--text-dark);
   cursor: pointer;
   font-weight: 600;
   font-size: 0.95rem;
@@ -278,8 +314,8 @@ header {
 }
 
 #cpuForm button[type="submit"]:hover {
-  background: #00e6c0;
-  box-shadow: 0 3px 10px rgba(0, 200, 83, 0.35);
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-btn-hover-green);
   transform: translateY(-1px);
 }
 
@@ -293,8 +329,8 @@ header {
   border: none;
   padding-bottom: 5px;
   border-radius: 8px;
-  background: #00bfa5;
-  color: #02110f;
+  background: var(--accent-main);
+  color: var(--text-dark);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
@@ -303,8 +339,8 @@ header {
 }
 
 .add-component-btn:hover {
-  background: #00e6c0;
-  box-shadow: 0 2px 10px rgba(0, 230, 192, 0.5);
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-btn-hover-aqua);
   transform: translateY(-1px);
 }
 
@@ -321,7 +357,7 @@ header {
   justify-content: center;
   align-items: center;
   padding: 10px;
-  background-color: rgba(0, 0, 0, 0.45);
+  background-color: var(--backdrop-edit);
 }
 
 #editFormModal.show {
@@ -331,8 +367,8 @@ header {
 
 #editFormModal .modal-content {
   position: relative;
-  background: #05080c;
-  color: #e5f7f2;
+  background: var(--bg-input);
+  color: var(--text-main);
   padding: 20px 22px;
   border-radius: 14px;
   width: 100%;
@@ -344,7 +380,7 @@ header {
 #editFormTitle {
   margin: 0 0 14px;
   font-size: 1.35rem;
-  border-bottom: 2px solid #00e6c0;
+  border-bottom: 2px solid var(--accent-border);
   padding-bottom: 6px;
 }
 
@@ -354,7 +390,7 @@ header {
   right: 14px;
   font-size: 1.4rem;
   cursor: pointer;
-  color: #7fd8c7;
+  color: var(--accent-soft-2);
 }
 
 #closeEditFormModal:hover {
@@ -370,7 +406,7 @@ header {
 
 #editFormFields label {
   font-size: 0.9rem;
-  color: #e5f7f2;
+  color: var(--text-main);
   display: block;
   margin-bottom: 4px;
 }
@@ -379,15 +415,15 @@ header {
   width: 100%;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #224b46;
-  background: #0f151b;
-  color: #e5f7f2;
+  border: 1px solid var(--accent-border-muted);
+  background: var(--bg-input-alt);
+  color: var(--text-main);
   font-size: 0.95rem;
 }
 
 #editFormFields input:focus {
   outline: none;
-  border-color: #00e6c0;
+  border-color: var(--accent-hover);
   box-shadow: 0 0 6px rgba(0, 230, 192, 0.4);
 }
 
@@ -396,8 +432,8 @@ header {
   padding: 9px 12px;
   border-radius: 10px;
   border: none;
-  background: #00bfa5;
-  color: #02110f;
+  background: var(--accent-main);
+  color: var(--text-dark);
   cursor: pointer;
   font-weight: 600;
   font-size: 0.95rem;
@@ -405,8 +441,8 @@ header {
 }
 
 #editForm button[type="submit"]:hover {
-  background: #00e6c0;
-  box-shadow: 0 3px 10px rgba(0, 200, 83, 0.35);
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-btn-hover-green);
   transform: translateY(-1px);
 }
 
@@ -425,11 +461,11 @@ header {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background-color: #00bfa5;
-  color: #02110f;
+  background-color: var(--accent-main);
+  color: var(--text-dark);
   padding: 15px 25px;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+  box-shadow: var(--shadow-notification);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.4s;
@@ -449,15 +485,15 @@ header {
   padding: 12px 18px;
   font-size: 1rem;
   border-radius: 12px;
-  border: 1px solid #224b46;
+  border: 1px solid var(--accent-border-muted);
   outline: none;
   transition: 0.3s;
-  background: #05080c;
-  color: #e5f7f2;
+  background: var(--bg-input);
+  color: var(--text-main);
 }
 
 #searchInput:focus {
-  border-color: #00e6c0;
+  border-color: var(--accent-hover);
   box-shadow: 0 0 12px rgba(0, 230, 192, 0.45);
 }
 
@@ -465,47 +501,46 @@ header {
   text-align: center;
   margin-top: 10px;
   font-size: 0.9rem;
-  color: #e5f7f2;
+  color: var(--text-main);
   width: 100%;
   display: block;
   margin: 20px auto 30px;
   padding: 12px 18px;
-  font-size: 1rem;
   border-radius: 12px;
-  border: 1px solid #224b46;
+  border: 1px solid var(--accent-border-muted);
   outline: none;
   transition: 0.3s;
-  background: #05080c;
+  background: var(--bg-input);
 }
 
 #purposeSelect {
   margin-left: 10px;
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid #224b46;
+  border: 1px solid var(--accent-border-muted);
   outline: none;
   transition: 0.3s;
-  background: #05080c;
-  color: #e5f7f2;
+  background: var(--bg-input);
+  color: var(--text-main);
 }
 
 #maxPriceInput {
   margin-left: 10px;
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid #224b46;
+  border: 1px solid var(--accent-border-muted);
   outline: none;
   transition: 0.3s;
-  background: #05080c;
-  color: #e5f7f2;
+  background: var(--bg-input);
+  color: var(--text-main);
 }
 
 #applyPriceBtn {
   margin-left: 10px;
   padding: 6px 12px;
   border: none;
-  background-color: #00bfa5;
-  color: #02110f;
+  background-color: var(--accent-main);
+  color: var(--text-dark);
   border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
@@ -513,7 +548,7 @@ header {
 }
 
 #applyPriceBtn:hover {
-  background-color: #00e6c0;
+  background-color: var(--accent-hover);
 }
 
 @keyframes fadeIn {
