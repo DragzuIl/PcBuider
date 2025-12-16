@@ -302,8 +302,7 @@ header {
   white-space: nowrap;
 }
 
-.add-component-btn:hover {
-  background: #00e6c0;
+.add-component-btn:hover {  background: #00e6c0;
   box-shadow: 0 2px 10px rgba(0, 230, 192, 0.5);
   transform: translateY(-1px);
 }
