@@ -338,9 +338,9 @@ header {
   white-space: nowrap;
 }
 
-.add-component-btn:hover {
-  background: var(--accent-hover);
-  box-shadow: var(--shadow-btn-hover-aqua);
+
+.add-component-btn:hover {  background: #00e6c0;
+  box-shadow: 0 2px 10px rgba(0, 230, 192, 0.5);
   transform: translateY(-1px);
 }
 

@@ -5,7 +5,7 @@ export default defineConfig({
     root:"./frontend",
   plugins: [react()],
   server: {
-    host: true, // слушать все IP
-    port: 3000, // можно изменить порт
+    host: true,
+    port: 3000,
   },
 });

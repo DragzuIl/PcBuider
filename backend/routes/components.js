@@ -26,13 +26,12 @@ router.get("/cpu", async (req, res) => {
 });
 
 router.post("/cpu", async (req, res) => {
-    const { name, cores, threads, frequency, socket, price } = req.body; // socket = "AM5"
+    const { name, cores, threads, frequency, socket, price } = req.body;
     console.log("POST /cpu body:", req.body);
 
     try {
         const request = new sql.Request();
 
-        // находим id сокета по названию
         const normalizedSocket = String(socket).trim();
         const socketResult = await request
             .input("socket", sql.NVarChar, normalizedSocket)

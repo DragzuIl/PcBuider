@@ -12,13 +12,10 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Статика для фронтенда
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// API маршруты
 app.use("/api/components", componentsRouter);
 
-// Отдаём HTML
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });

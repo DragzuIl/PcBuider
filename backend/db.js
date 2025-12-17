@@ -1,4 +1,3 @@
-// db.js
 export const config = {
     user: "sa",
     password: "СложныйПароль123!",
