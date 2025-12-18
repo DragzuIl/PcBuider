@@ -3,7 +3,7 @@ const sql = require('mssql');
 const config = {
   user: 'db_user',
   password: 'db_pass',
-  server: 'localhost',
+  server: '192.168.0.35',
   database: 'PcBuilder',
   options: {
     encrypt: false,

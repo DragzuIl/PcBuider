@@ -1,221 +1,279 @@
+// routes/components.js
 import express from "express";
-import sql from "mssql";
+import { supabase } from "../supabaseClient.js";
+
 const router = express.Router();
 
-// CPU
+// ================= CPU =================
+
+// GET /api/components/cpu
 router.get("/cpu", async (req, res) => {
-    try {
-        const result = await sql.query(`
-      SELECT 
-        c.id,
-        c.name,
-        c.cores,
-        c.threads,
-        c.frequency,
-        c.price,
-        c.socket_id,
-        s.socket AS socket
-      FROM CPU c
-      JOIN Sockets s ON c.socket_id = s.id
-    `);
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
-});
-
-router.post("/cpu", async (req, res) => {
-    const { name, cores, threads, frequency, socket, price } = req.body;
-    console.log("POST /cpu body:", req.body);
-
-    try {
-        const request = new sql.Request();
-
-        const normalizedSocket = String(socket).trim();
-        const socketResult = await request
-            .input("socket", sql.NVarChar, normalizedSocket)
-            .query("SELECT id FROM Sockets WHERE socket = @socket");
-
-
-        if (socketResult.recordset.length === 0) {
-            return res.status(400).json({ error: "Неизвестный сокет" });
-        }
-
-        const socket_id = socketResult.recordset[0].id;
-
-        await request
-            .input("name", sql.NVarChar, name)
-            .input("cores", sql.Int, cores)
-            .input("threads", sql.Int, threads)
-            .input("frequency", sql.Float, frequency)
-            .input("socket_id", sql.Int, socket_id)
-            .input("price", sql.Int, price)
-            .query(`
-        INSERT INTO CPU (name, cores, threads, frequency, socket_id, price)
-        VALUES (@name, @cores, @threads, @frequency, @socket_id, @price)
-      `);
-
-        res.status(201).json({ success: true });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
-});
-
-
-router.put("/cpu/:id", async (req, res) => {
-    const { id } = req.params;
-    const { name, cores, threads, frequency, socket, price } = req.body;
-    console.log("PUT /cpu body:", id, req.body);
-
-    try {
-        const request = new sql.Request();
-
-        const socketResult = await request
-            .input("socket", sql.NVarChar, socket)
-            .query("SELECT id FROM Sockets WHERE socket = @socket");
-
-        if (socketResult.recordset.length === 0) {
-            return res.status(400).json({ error: "Неизвестный сокет" });
-        }
-
-        const socket_id = socketResult.recordset[0].id;
-        console.log("Update CPU:", { id, name, cores, threads, frequency, socket_id, price });
-        await request
-            .input("id", sql.Int, id)
-            .input("name", sql.NVarChar, name)
-            .input("cores", sql.Int, cores)
-            .input("threads", sql.Int, threads)
-            .input("frequency", sql.Float, frequency)
-            .input("socket_id", sql.Int, socket_id)
-            .input("price", sql.Int, price)
-            .query(`
-        UPDATE CPU
-        SET name = @name,
-            cores = @cores,
-            threads = @threads,
-            frequency = @frequency,
-            socket_id = @socket_id,
-            price = @price
-        WHERE id = @id
-      `);
-
-        res.json({ success: true });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
-});
-
-
-
-
-// Motherboard
-router.get("/motherboard", async (req, res) => {
-    try {
-        const result = await sql.query(`
-      SELECT 
-        m.id,
-        m.name,
-        m.form_factor,
-        m.max_ram,
-        m.ram_type,
-        m.price,
-        m.socket_id,
-        s.socket AS socket
-      FROM Motherboard m
-      JOIN Sockets s ON m.socket_id = s.id
-    `);
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
-});
-
-router.post("/motherboard", async (req, res) => {
-  const { name, socket, form_factor, max_ram, ram_type, price } = req.body;
-
   try {
-    const request = new sql.Request();
-    await request
-      .input("name", sql.NVarChar, name)
-      .input("socket", sql.NVarChar, socket)
-      .input("form_factor", sql.NVarChar, form_factor)
-      .input("max_ram", sql.Int, max_ram)
-      .input("ram_type", sql.NVarChar, ram_type)
-      .input("price", sql.Int, price)
-      .query(`
-        INSERT INTO Motherboard (name, socket, form_factor, max_ram, ram_type, price)
-        VALUES (@name, @socket, @form_factor, @max_ram, @ram_type, @price)
-      `);
+    const { data, error } = await supabase
+      .from("cpu")
+      .select(`
+        id,
+        name,
+        cores,
+        threads,
+        frequency,
+        price,
+        socket_id,
+        sockets ( socket )
+      `)
+      .order("id", { ascending: true });
 
-    res.status(201).json({ success: true });
+    if (error) throw error;
+
+    const result = data.map(row => ({
+      id: row.id,
+      name: row.name,
+      cores: row.cores,
+      threads: row.threads,
+      frequency: row.frequency,
+      price: row.price,
+      socket_id: row.socket_id,
+      socket: row.sockets?.socket || null
+    }));
+
+    res.json(result);
   } catch (err) {
-    console.error(err);
+    console.error("GET /cpu error:", err);
     res.status(500).send("Database error");
   }
 });
 
+// POST /api/components/cpu
+router.post("/cpu", async (req, res) => {
+  const { name, cores, threads, frequency, socket, price } = req.body;
+  console.log("POST /cpu body:", req.body);
+
+  try {
+    const normalizedSocket = String(socket).trim();
+
+    const { data: socketRow, error: sockErr } = await supabase
+      .from("sockets")
+      .select("id")
+      .eq("socket", normalizedSocket)
+      .limit(1)
+      .maybeSingle();
+
+    if (sockErr) throw sockErr;
+    if (!socketRow) {
+      return res.status(400).json({ error: "Неизвестный сокет" });
+    }
+
+    const socket_id = socketRow.id;
+
+    const { error } = await supabase.from("cpu").insert([{
+      name,
+      cores,
+      threads,
+      frequency,
+      socket_id,
+      price
+    }]);
+
+    if (error) throw error;
+
+    res.status(201).json({ success: true });
+  } catch (err) {
+    console.error("POST /cpu error:", err);
+    res.status(500).send("Database error");
+  }
+});
+
+// PUT /api/components/cpu/:id
+router.put("/cpu/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, cores, threads, frequency, socket, price } = req.body;
+  console.log("PUT /cpu body:", id, req.body);
+
+  try {
+    const normalizedSocket = String(socket).trim();
+
+    const { data: socketRow, error: sockErr } = await supabase
+      .from("sockets")
+      .select("id")
+      .eq("socket", normalizedSocket)
+      .limit(1)
+      .maybeSingle();
+
+    if (sockErr) throw sockErr;
+    if (!socketRow) {
+      return res.status(400).json({ error: "Неизвестный сокет" });
+    }
+
+    const socket_id = socketRow.id;
+
+    const { error } = await supabase
+      .from("cpu")
+      .update({ name, cores, threads, frequency, socket_id, price })
+      .eq("id", Number(id));
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("PUT /cpu error:", err);
+    res.status(500).send("Database error");
+  }
+});
+
+// ================= Motherboard =================
+
+// GET /api/components/motherboard
+router.get("/motherboard", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("motherboard")
+      .select(`
+        id,
+        name,
+        form_factor,
+        max_ram,
+        ram_type,
+        price,
+        socket_id,
+        sockets ( socket )
+      `)
+      .order("id", { ascending: true });
+
+    if (error) throw error;
+
+    const result = data.map(row => ({
+      id: row.id,
+      name: row.name,
+      form_factor: row.form_factor,
+      max_ram: row.max_ram,
+      ram_type: row.ram_type,
+      price: row.price,
+      socket_id: row.socket_id,
+      socket: row.sockets?.socket || null
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error("GET /motherboard error:", err);
+    res.status(500).send("Database error");
+  }
+});
+
+// POST /api/components/motherboard
+router.post("/motherboard", async (req, res) => {
+  const { name, socket, form_factor, max_ram, ram_type, price } = req.body;
+
+  try {
+    const normalizedSocket = String(socket).trim();
+
+    const { data: socketRow, error: sockErr } = await supabase
+      .from("sockets")
+      .select("id")
+      .eq("socket", normalizedSocket)
+      .limit(1)
+      .maybeSingle();
+
+    if (sockErr) throw sockErr;
+    if (!socketRow) {
+      return res.status(400).json({ error: "Неизвестный сокет" });
+    }
+
+    const socket_id = socketRow.id;
+
+    const { error } = await supabase.from("motherboard").insert([{
+      name,
+      socket_id,
+      form_factor,
+      max_ram,
+      ram_type,
+      price
+    }]);
+
+    if (error) throw error;
+
+    res.status(201).json({ success: true });
+  } catch (err) {
+    console.error("POST /motherboard error:", err);
+    res.status(500).send("Database error");
+  }
+});
+
+// PUT /api/components/motherboard/:id
 router.put("/motherboard/:id", async (req, res) => {
   const { id } = req.params;
   const { name, socket, form_factor, max_ram, ram_type, price } = req.body;
 
   try {
-    const request = new sql.Request();
-    await request
-      .input("id", sql.Int, id)
-      .input("name", sql.NVarChar, name)
-      .input("socket", sql.NVarChar, socket)
-      .input("form_factor", sql.NVarChar, form_factor)
-      .input("max_ram", sql.Int, max_ram)
-      .input("ram_type", sql.NVarChar, ram_type)
-      .input("price", sql.Int, price)
-      .query(`
-        UPDATE Motherboard
-        SET name = @name,
-            socket = @socket,
-            form_factor = @form_factor,
-            max_ram = @max_ram,
-            ram_type = @ram_type,
-            price = @price
-        WHERE id = @id
-      `);
+    const normalizedSocket = String(socket).trim();
+
+    const { data: socketRow, error: sockErr } = await supabase
+      .from("sockets")
+      .select("id")
+      .eq("socket", normalizedSocket)
+      .limit(1)
+      .maybeSingle();
+
+    if (sockErr) throw sockErr;
+    if (!socketRow) {
+      return res.status(400).json({ error: "Неизвестный сокет" });
+    }
+
+    const socket_id = socketRow.id;
+
+    const { error } = await supabase
+      .from("motherboard")
+      .update({
+        name,
+        socket_id,
+        form_factor,
+        max_ram,
+        ram_type,
+        price
+      })
+      .eq("id", Number(id));
+
+    if (error) throw error;
 
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("PUT /motherboard error:", err);
     res.status(500).send("Database error");
   }
 });
 
-// GPU
+// ================= GPU =================
+
 router.get("/gpu", async (req, res) => {
-    try {
-        const result = await sql.query("SELECT * FROM GPU");
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
+  try {
+    const { data, error } = await supabase
+      .from("gpu")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error("GET /gpu error:", err);
+    res.status(500).send("Database error");
+  }
 });
 
 router.post("/gpu", async (req, res) => {
   const { name, vram, price } = req.body;
+
   try {
-    const request = new sql.Request();
-    await request
-      .input("name", sql.NVarChar, name)
-      .input("vram", sql.Int, vram)
-      .input("price", sql.Int, price)
-      .query(`
-        INSERT INTO GPU (name, vram, price)
-        VALUES (@name, @vram, @price)
-      `);
+    const { error } = await supabase.from("gpu").insert([{
+      name,
+      vram,
+      price
+    }]);
+
+    if (error) throw error;
+
     res.status(201).json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("POST /gpu error:", err);
     res.status(500).send("Database error");
   }
 });
@@ -223,56 +281,57 @@ router.post("/gpu", async (req, res) => {
 router.put("/gpu/:id", async (req, res) => {
   const { id } = req.params;
   const { name, vram, price } = req.body;
+
   try {
-    const request = new sql.Request();
-    await request
-      .input("id", sql.Int, id)
-      .input("name", sql.NVarChar, name)
-      .input("vram", sql.Int, vram)
-      .input("price", sql.Int, price)
-      .query(`
-        UPDATE GPU
-        SET name = @name,
-            vram = @vram,
-            price = @price
-        WHERE id = @id
-      `);
+    const { error } = await supabase
+      .from("gpu")
+      .update({ name, vram, price })
+      .eq("id", Number(id));
+
+    if (error) throw error;
+
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("PUT /gpu error:", err);
     res.status(500).send("Database error");
   }
 });
 
+// ================= RAM =================
 
-// RAM
 router.get("/ram", async (req, res) => {
-    try {
-        const result = await sql.query("SELECT * FROM RAM");
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
+  try {
+    const { data, error } = await supabase
+      .from("ram")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error("GET /ram error:", err);
+    res.status(500).send("Database error");
+  }
 });
 
 router.post("/ram", async (req, res) => {
   const { name, size, frequency, ram_type, price } = req.body;
+
   try {
-    const request = new sql.Request();
-    await request
-      .input("name", sql.NVarChar, name)
-      .input("size", sql.Int, size)
-      .input("frequency", sql.Int, frequency)
-      .input("ram_type", sql.NVarChar, ram_type)
-      .input("price", sql.Int, price)
-      .query(`
-        INSERT INTO RAM (name, size, frequency, ram_type, price)
-        VALUES (@name, @size, @frequency, @ram_type, @price)
-      `);
+    const { error } = await supabase.from("ram").insert([{
+      name,
+      size,
+      frequency,
+      ram_type,
+      price
+    }]);
+
+    if (error) throw error;
+
     res.status(201).json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("POST /ram error:", err);
     res.status(500).send("Database error");
   }
 });
@@ -280,58 +339,56 @@ router.post("/ram", async (req, res) => {
 router.put("/ram/:id", async (req, res) => {
   const { id } = req.params;
   const { name, size, frequency, ram_type, price } = req.body;
+
   try {
-    const request = new sql.Request();
-    await request
-      .input("id", sql.Int, id)
-      .input("name", sql.NVarChar, name)
-      .input("size", sql.Int, size)
-      .input("frequency", sql.Int, frequency)
-      .input("ram_type", sql.NVarChar, ram_type)
-      .input("price", sql.Int, price)
-      .query(`
-        UPDATE RAM
-        SET name = @name,
-            size = @size,
-            frequency = @frequency,
-            ram_type = @ram_type,
-            price = @price
-        WHERE id = @id
-      `);
+    const { error } = await supabase
+      .from("ram")
+      .update({ name, size, frequency, ram_type, price })
+      .eq("id", Number(id));
+
+    if (error) throw error;
+
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("PUT /ram error:", err);
     res.status(500).send("Database error");
   }
 });
 
-// Storage
+// ================= Storage =================
+
 router.get("/storage", async (req, res) => {
-    try {
-        const result = await sql.query("SELECT * FROM Storage");
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
+  try {
+    const { data, error } = await supabase
+      .from("storage")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error("GET /storage error:", err);
+    res.status(500).send("Database error");
+  }
 });
 
 router.post("/storage", async (req, res) => {
   const { name, type, size_gb, price } = req.body;
+
   try {
-    const request = new sql.Request();
-    await request
-      .input("name", sql.NVarChar, name)
-      .input("type", sql.NVarChar, type)
-      .input("size_gb", sql.Int, size_gb)
-      .input("price", sql.Int, price)
-      .query(`
-        INSERT INTO Storage (name, type, size_gb, price)
-        VALUES (@name, @type, @size_gb, @price)
-      `);
+    const { error } = await supabase.from("storage").insert([{
+      name,
+      type,
+      size_gb,
+      price
+    }]);
+
+    if (error) throw error;
+
     res.status(201).json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("POST /storage error:", err);
     res.status(500).send("Database error");
   }
 });
@@ -339,56 +396,56 @@ router.post("/storage", async (req, res) => {
 router.put("/storage/:id", async (req, res) => {
   const { id } = req.params;
   const { name, type, size_gb, price } = req.body;
+
   try {
-    const request = new sql.Request();
-    await request
-      .input("id", sql.Int, id)
-      .input("name", sql.NVarChar, name)
-      .input("type", sql.NVarChar, type)
-      .input("size_gb", sql.Int, size_gb)
-      .input("price", sql.Int, price)
-      .query(`
-        UPDATE Storage
-        SET name = @name,
-            type = @type,
-            size_gb = @size_gb,
-            price = @price
-        WHERE id = @id
-      `);
+    const { error } = await supabase
+      .from("storage")
+      .update({ name, type, size_gb, price })
+      .eq("id", Number(id));
+
+    if (error) throw error;
+
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("PUT /storage error:", err);
     res.status(500).send("Database error");
   }
 });
 
-// PSU
+// ================= PSU =================
+
 router.get("/psu", async (req, res) => {
-    try {
-        const result = await sql.query("SELECT * FROM PSU");
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
+  try {
+    const { data, error } = await supabase
+      .from("psu")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error("GET /psu error:", err);
+    res.status(500).send("Database error");
+  }
 });
 
 router.post("/psu", async (req, res) => {
   const { name, wattage, certificate, price } = req.body;
+
   try {
-    const request = new sql.Request();
-    await request
-      .input("name", sql.NVarChar, name)
-      .input("wattage", sql.Int, wattage)
-      .input("certificate", sql.NVarChar, certificate)
-      .input("price", sql.Int, price)
-      .query(`
-        INSERT INTO PSU (name, wattage, certificate, price)
-        VALUES (@name, @wattage, @certificate, @price)
-      `);
+    const { error } = await supabase.from("psu").insert([{
+      name,
+      wattage,
+      certificate,
+      price
+    }]);
+
+    if (error) throw error;
+
     res.status(201).json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("POST /psu error:", err);
     res.status(500).send("Database error");
   }
 });
@@ -396,58 +453,56 @@ router.post("/psu", async (req, res) => {
 router.put("/psu/:id", async (req, res) => {
   const { id } = req.params;
   const { name, wattage, certificate, price } = req.body;
+
   try {
-    const request = new sql.Request();
-    await request
-      .input("id", sql.Int, id)
-      .input("name", sql.NVarChar, name)
-      .input("wattage", sql.Int, wattage)
-      .input("certificate", sql.NVarChar, certificate)
-      .input("price", sql.Int, price)
-      .query(`
-        UPDATE PSU
-        SET name = @name,
-            wattage = @wattage,
-            certificate = @certificate,
-            price = @price
-        WHERE id = @id
-      `);
+    const { error } = await supabase
+      .from("psu")
+      .update({ name, wattage, certificate, price })
+      .eq("id", Number(id));
+
+    if (error) throw error;
+
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("PUT /psu error:", err);
     res.status(500).send("Database error");
   }
 });
 
-// Case
+// ================= Case =================
+
 router.get("/case", async (req, res) => {
-    try {
-        const result = await sql.query("SELECT * FROM CasePC");
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Database error");
-    }
+  try {
+    const { data, error } = await supabase
+      .from("casepc")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error("GET /case error:", err);
+    res.status(500).send("Database error");
+  }
 });
 
 router.post("/case", async (req, res) => {
   const { name, form_factor_support, price, towerType } = req.body;
 
   try {
-    const request = new sql.Request();
-    await request
-      .input("name", sql.NVarChar, name)
-      .input("form_factor_support", sql.NVarChar, form_factor_support)
-      .input("price", sql.Int, price)
-      .input("towerType", sql.NChar, towerType)
-      .query(`
-        INSERT INTO CasePC (name, form_factor_support, price, [tower-type])
-        VALUES (@name, @form_factor_support, @price, @towerType)
-      `);
+    const { error } = await supabase.from("casepc").insert([{
+      name,
+      form_factor_support,
+      price,
+      "tower-type": towerType
+    }]);
+
+    if (error) throw error;
 
     res.status(201).json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("POST /case error:", err);
     res.status(500).send("Database error");
   }
 });
@@ -457,25 +512,21 @@ router.put("/case/:id", async (req, res) => {
   const { name, form_factor_support, price, towerType } = req.body;
 
   try {
-    const request = new sql.Request();
-    await request
-      .input("id", sql.Int, id)
-      .input("name", sql.NVarChar, name)
-      .input("form_factor_support", sql.NVarChar, form_factor_support)
-      .input("price", sql.Int, price)
-      .input("towerType", sql.NChar, towerType)
-      .query(`
-        UPDATE CasePC
-        SET name = @name,
-            form_factor_support = @form_factor_support,
-            price = @price,
-            [tower-type] = @towerType
-        WHERE id = @id
-      `);
+    const { error } = await supabase
+      .from("casepc")
+      .update({
+        name,
+        form_factor_support,
+        price,
+        "tower-type": towerType
+      })
+      .eq("id", Number(id));
+
+    if (error) throw error;
 
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("PUT /case error:", err);
     res.status(500).send("Database error");
   }
 });

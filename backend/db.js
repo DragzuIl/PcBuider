@@ -1,7 +1,7 @@
 export const config = {
     user: "sa",
     password: "СложныйПароль123!",
-    server: "localhost",
+    server: "192.168.0.35",
     database: "PcBuilder",
     options: {
         encrypt: false,

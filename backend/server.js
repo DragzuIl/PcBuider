@@ -1,9 +1,9 @@
 import express from "express";
 import cors from "cors";
-import sql from "mssql";
 import path from "path";
 import { fileURLToPath } from "url";
 import componentsRouter from "./routes/components.js";
+import { supabase } from "./supabaseClient.js";
 
 const app = express();
 app.use(cors());
@@ -13,36 +13,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(express.static(path.join(__dirname, "../frontend")));
-
 app.use("/api/components", componentsRouter);
 
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/index.html"));
+  res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
-const config = {
-    user: "sa",
-    password: "СложныйПароль123!",
-    server: "localhost",
-    database: "PcBuilder",
-    options: {
-        encrypt: false,
-        trustServerCertificate: true
-    },
-    port: 1433
-};
-
 async function startServer() {
-    try {
-        await sql.connect(config);
-        console.log("DB connected!");
-    } catch (err) {
-        console.error("DB Connection Error:", err);
-        return;
-    }
+  // Для Supabase отдельного connect не нужно – клиент статический.
+  // Можно сделать простой тест-запрос:
+  const { error } = await supabase.from("cpu").select("id").limit(1);
+  if (error) {
+    console.error("DB Connection Error (Supabase):", error);
+    return;
+  }
+  console.log("Supabase DB connected!");
 
-    const PORT = 3000;
-    app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+  const PORT = 3000;
+  app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
 }
 
 startServer();
